@@ -178,7 +178,7 @@ print(model.summary())
 
 model_weights_path = os.path.join('Models', 'model_weights')
 if os.path.isfile(model_weights_path) or os.path.isdir(model_weights_path):
-    print('Loading weights from file...')
+    print('Loading pretrained model...')
     model = tf.keras.models.load_model(model_weights_path)
     # model.load_weights(model_weights_path)
 else:
@@ -198,10 +198,22 @@ else:
         verbose=1
     )
 
+    '''
+    Epoch 3/10
+    229362/229362 [==============================] - ETA: 0s - loss: 0.0093 - acc: 0.9969  
+    Epoch 00003: saving model to Models/model_weights
+    WARNING:tensorflow:FOR KERAS USERS: The object that you are saving contains one or more Keras models or layers. If you are loading the SavedModel with `tf.keras.models.load_model`, continue reading (otherwise, you may ignore the following instructions). Please change your code to save with `tf.keras.models.save_model` or `model.save`, and confirm that the file "keras.metadata" exists in the export directory. In the future, Keras will only load the SavedModels that have this file. In other words, `tf.saved_model.save` will no longer write SavedModels that can be recovered as Keras models (this will apply in TF 2.5).
+
+    FOR DEVS: If you are overwriting _tracking_metadata in your class, this property has been used to save metadata in the SavedModel. The metadta field will be deprecated soon, so please move the metadata to a different file.
+    229362/229362 [==============================] - 134s 585us/sample - loss: 0.0093 - acc: 0.9969 - val_loss: 0.0583 - val_acc: 0.9872
+
+
+    '''
+
     # print(X_train.shape)
     # print(Y_train.shape)
-    X_train = X_train[:200,:,:]
-    Y_train = Y_train[:200]
+    # X_train = X_train[:200,:,:]
+    # Y_train = Y_train[:200]
     # print(X_train.shape)
     # print(Y_train.shape)
     # exit()
