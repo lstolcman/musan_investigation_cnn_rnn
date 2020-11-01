@@ -25,13 +25,6 @@ import os.path
 
 
 
-# from tensorflow.compat.v1 import ConfigProto
-# from tensorflow.compat.v1 import InteractiveSession
-
-# config = ConfigProto()
-# config.gpu_options.allow_growth = True
-# session = InteractiveSession(config=config)
-
 
 
 codes=inspect.getsource(inspect.getmodule(inspect.currentframe()))
@@ -151,32 +144,29 @@ K.clear_session()
 in_shape = X_train.shape[1:]
 
 model_get_path = os.path.join('Models', 'model_initial')
-model_trained_path = os.path.join('Models', 'model_trained.h5')
-if os.path.isfile(model_get_path):
+if os.path.isfile(model_get_path) or os.path.isdir(model_get_path):
     print('Loading model from file...')
     model = tf.keras.models.load_model(model_get_path)
 
-elif os.path.isfile(model_trained_path):
-    model = tf.keras.models.load_model(model_trained_path)
 else:
     print('Getting model...')
     model = get_model(in_shape, name=modelname)
-    filepath = model_get_path
+    # filepath = model_get_path
     tf.keras.models.save_model(
         model,
-        filepath,
-        overwrite=True,
-        include_optimizer=True,
-        save_format=None,
-        signatures=None,
-        options=None
+        model_get_path,
+        # overwrite=True,
+        # include_optimizer=True,
+        # save_format=None,
+        # signatures=None,
+        # options=None
     )
 
 print(model.summary())
 
-if os.path.isfile(model_trained_path):
-    # model = tf.keras.models.load_model(model_trained_path)
-    pass
+model_trained_path = os.path.join('Models', 'model_trained')
+if os.path.isfile(model_trained_path) or os.path.isdir(model_trained_path):
+    model = tf.keras.models.load_model(model_trained_path)
 else:
     lr0=5e-4
     opt = Adam(lr=lr0)
@@ -202,7 +192,7 @@ else:
                     callbacks=[lrs])
 
     # model.save(modelff)
-    # filepath = model_trained_path
+    filepath = model_trained_path
     tf.keras.models.save_model(
         model,
         filepath,
@@ -238,14 +228,6 @@ acc_sns_val = accuracy_score(sns(Y_val), sns(Yp_val.argmax(-1)))
 acc_sns_test = accuracy_score(sns(Y_test), sns(Yp_test.argmax(-1)))
 
 print('Test Accuracy = {:0.4}%'.format(acc_test*100))
-
-
-
-
-
-
-
-
 
 
 
