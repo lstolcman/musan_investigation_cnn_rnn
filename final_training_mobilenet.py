@@ -141,6 +141,8 @@ if (not 'X_train' in locals()) or input('Reload Data? [Y/N] :').lower()=='y':
 
 K.clear_session()
 
+
+# https://github.com/tensorflow/tensorflow/issues/43174#issuecomment-691657692
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
 
@@ -148,6 +150,7 @@ config = ConfigProto()
 config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
 sess = tf.compat.v1.Session()
+
 
 
 in_shape = X_train.shape[1:]
@@ -173,10 +176,13 @@ else:
 
 print(model.summary())
 
-model_trained_path = os.path.join('Models', 'model_trained')
-if os.path.isfile(model_trained_path) or os.path.isdir(model_trained_path):
-    model = tf.keras.models.load_model(model_trained_path)
+model_weights_path = os.path.join('Models', 'model_weights')
+if os.path.isfile(model_weights_path) or os.path.isdir(model_weights_path):
+    print('Loading weights from file...')
+    model = tf.keras.models.load_model(model_weights_path)
+    # model.load_weights(model_weights_path)
 else:
+    print('Training weights...')
     lr0=5e-4
     opt = Adam(lr=lr0)
     model.compile(opt, 'sparse_categorical_crossentropy', ['acc'])
@@ -184,33 +190,28 @@ else:
     lrs = LearningRateScheduler(lambda ep: K.get_value(opt.lr)\
                                 if ep < 5 else K.get_value(opt.lr)*.6, 
                                 verbose=1)
-    mchk = ModelCheckpoint(modelf, save_best_only='True', save_freq='epoch', verbose=1)
+    mchk = ModelCheckpoint(
+        model_weights_path,
+        # save_weights_only=True,
+        # save_best_only=True,
+        save_freq='epoch',
+        verbose=1
+    )
 
     # print(X_train.shape)
     # print(Y_train.shape)
-    # X_train = X_train[:200,:,:]
-    # Y_train = Y_train[:200]
+    X_train = X_train[:200,:,:]
+    Y_train = Y_train[:200]
     # print(X_train.shape)
     # print(Y_train.shape)
     # exit()
 
-
     fhist = model.fit(X_train, Y_train, batch_size=bsize, epochs=num_epochs,
                     validation_data=[X_val, Y_val],
-                    #callbacks=[mchk, lrs])
-                    callbacks=[lrs])
+                    callbacks=[mchk, lrs])
+                    # callbacks=[lrs])
 
-    # model.save(modelff)
-    filepath = model_trained_path
-    tf.keras.models.save_model(
-        model,
-        filepath,
-        overwrite=True,
-        include_optimizer=True,
-        save_format=None,
-        signatures=None,
-        options=None
-    )
+    # # model.save(modelff)
 
 Yp_val = model.predict(X_val, verbose=1, batch_size=256)
 Yp_test = model.predict(X_test, verbose=1, batch_size=256)
