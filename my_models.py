@@ -11,8 +11,16 @@ import tensorflow as tf
 from custom_layers import *
 from keras.callbacks import *
 
-from keras.applications.mobilenet import MobileNet, relu6, DepthwiseConv2D
+from keras.applications.mobilenet import MobileNet#, relu6, DepthwiseConv2D
 from keras.utils.generic_utils import CustomObjectScope
+from keras.layers import ReLU
+from keras.layers import DepthwiseConv2D
+
+
+
+import tensorflow.compat.v1.keras.backend as K
+import tensorflow as tf
+tf.compat.v1.disable_eager_execution()
 
 def get_gru(in_shape, name='', num_classes=3):
     in_t = Input(shape=in_shape)
@@ -47,7 +55,7 @@ def get_mobile_net(in_shape, name='', num_classes=3):
                            pooling='avg', weights='imagenet')#'imagenet'
     
     def run_thru(x, name=None):
-        with CustomObjectScope({'relu6': relu6,
+        with CustomObjectScope({'relu6': ReLU,
                                 'DepthwiseConv2D': DepthwiseConv2D}):
             tdict = {base_model.input: x}
             lrs = base_model.layers[1:]

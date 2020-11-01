@@ -24,7 +24,7 @@ import inspect
 codes=inspect.getsource(inspect.getmodule(inspect.currentframe()))
 
 np.random.seed(7)
-root_path = r'e:\musan_data_derived.h5'  #Path to the derived features
+root_path = r'data/musan_data_derived.h5'  #Path to the derived features
 
 dtime = datetime.now().strftime('-%B-%d(%a)-%H-%H-%S')
 fname = Path(sys.argv[0]).stem

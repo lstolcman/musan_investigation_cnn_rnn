@@ -19,8 +19,8 @@ fs = 16000          #Sampling Frequency
 win_len = .025      #Window length
 win_step = .010     #Time stem between consequetive windows
 
-root_path = Path(r'E:\musan')                #path to the musan database
-target_path = Path(r'e:\musan_data_raw.h5')  #path to the output file
+root_path = Path(r'../datasets/musan/')                #path to the musan database
+target_path = Path(r'data/musan_data_raw.h5')  #path to the output file
 if target_path.exists():
     if input('Target path exists... REMOVE? [Y/N] :').lower()=='y':
         os.remove(str(target_path))

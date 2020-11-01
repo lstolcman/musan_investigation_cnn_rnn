@@ -20,11 +20,24 @@ from sklearn.metrics import accuracy_score, confusion_matrix, log_loss
 from plot_cm import plot_cm
 from my_models import get_mobile_net as get_model
 import inspect
+import os
+import os.path
+
+
+
+# from tensorflow.compat.v1 import ConfigProto
+# from tensorflow.compat.v1 import InteractiveSession
+
+# config = ConfigProto()
+# config.gpu_options.allow_growth = True
+# session = InteractiveSession(config=config)
+
+
 
 codes=inspect.getsource(inspect.getmodule(inspect.currentframe()))
 
 np.random.seed(7)
-root_path = r'e:\musan_data_derived.h5'   #Path to the derived features
+root_path = r'data/musan_data_derived.h5'   #Path to the derived features
 
 dtime = datetime.now().strftime('-%B-%d(%a)-%H-%H-%S')
 fname = Path(sys.argv[0]).stem
@@ -39,23 +52,33 @@ dtype = np.float16
 bsize = 128
 num_epochs=10
 
-resultf = './results/'+modelname+str(seg_len)+dtime+'.npz'
-modelf = './models/'+modelname+str(seg_len)+dtime+'.h5'
-modelff = './models/'+modelname+str(seg_len)+dtime+'_final.h5'
+resultf = os.path.join('Results', f'{modelname}{str(seg_len)}{dtime}.npz')
+modelf = os.path.join('Models', f'{modelname}{str(seg_len)}{dtime}.h5')
+modelff = os.path.join('Models', f'{modelname}{str(seg_len)}{dtime}_final.h5')
 
 ecatg = dict((c,i) for (i,c) in enumerate(['noise', 'music', 'speech']))
+# ecatg = ['music', 'noise', 'speech']
+
 
 if (not 'X_train' in locals()) or input('Reload Data? [Y/N] :').lower()=='y':
     with h5py.File(root_path, mode='r') as db:
-        fdict = dict((c, []) for c in ecatg)
-        for k in db.keys():
-            c = k.split('\\')[0]
-            if c in ecatg:
-                fdict[c].append(k)
+        fdict = dict((c, []) for c in ecatg.keys())
+        # for k in db.keys():
+        #     c = k.split('\\')[0]
+        #     if c in ecatg:
+        #         fdict[c].append(k)
+
+        for key in ecatg.keys():
+            for subkey in db[key].keys():
+                for file in db[key][subkey].keys():
+                    fdict[key].append(db[key][subkey][file].name)
+
+        # print(fdict.keys())
         
         train, val, test = {}, {}, {}
         for k in fdict:
             np.random.shuffle(fdict[k])
+            # print(fdict[k][:5])
             ut = int(len(fdict[k])*train_split)
             uv = int(len(fdict[k])*test_split)
             train[k], val[k], test[k] = fdict[k][:ut], fdict[k][ut:uv],\
@@ -84,15 +107,21 @@ if (not 'X_train' in locals()) or input('Reload Data? [Y/N] :').lower()=='y':
                 
             def yield_dat(self):
                 for k, files in self.dic.items():
+                    # print(k,files)
                     ln = len(files)
                     print('Concatenating {} {} files...'.format(ln, k.upper()))
                     for i, fl in enumerate(files):
+                        # print(i,fl)
+                        # print(db[fl][feat][:])
+                        # exit()
                         if not i % 50:
                             print('Read', str(i), 'out of', str(ln), 'files...')
                         
-                        dat = frm_gen(db[fl][feat][:])
+                        dat = frm_gen(db[fl][feat])
                         lbl = len(dat)*[float(ecatg[k])]
+                        
                         self.labels.append(lbl)
+                        # self.labels.append(len(dat)*[fl])
                         yield dat
 
         print('\nConcatenating train data...')
@@ -120,30 +149,76 @@ if (not 'X_train' in locals()) or input('Reload Data? [Y/N] :').lower()=='y':
 K.clear_session()
 
 in_shape = X_train.shape[1:]
-model = get_model(in_shape, name=modelname)
+
+model_get_path = os.path.join('Models', 'model_initial')
+model_trained_path = os.path.join('Models', 'model_trained.h5')
+if os.path.isfile(model_get_path):
+    print('Loading model from file...')
+    model = tf.keras.models.load_model(model_get_path)
+
+elif os.path.isfile(model_trained_path):
+    model = tf.keras.models.load_model(model_trained_path)
+else:
+    print('Getting model...')
+    model = get_model(in_shape, name=modelname)
+    filepath = model_get_path
+    tf.keras.models.save_model(
+        model,
+        filepath,
+        overwrite=True,
+        include_optimizer=True,
+        save_format=None,
+        signatures=None,
+        options=None
+    )
+
 print(model.summary())
 
-lr0=5e-4
-opt = Adam(lr=lr0)
-model.compile(opt, 'sparse_categorical_crossentropy', ['acc'])
+if os.path.isfile(model_trained_path):
+    # model = tf.keras.models.load_model(model_trained_path)
+    pass
+else:
+    lr0=5e-4
+    opt = Adam(lr=lr0)
+    model.compile(opt, 'sparse_categorical_crossentropy', ['acc'])
 
-lrs = LearningRateScheduler(lambda ep: K.get_value(opt.lr)\
-                            if ep < 5 else K.get_value(opt.lr)*.6, 
-                            verbose=1)
-mchk = ModelCheckpoint(modelf, save_best_only='True', period=1,
-                       verbose=1)
+    lrs = LearningRateScheduler(lambda ep: K.get_value(opt.lr)\
+                                if ep < 5 else K.get_value(opt.lr)*.6, 
+                                verbose=1)
+    mchk = ModelCheckpoint(modelf, save_best_only='True', save_freq='epoch', verbose=1)
 
-fhist = model.fit(X_train, Y_train, batch_size=bsize, epochs=num_epochs, 
-                  validation_data=[X_val, Y_val],
-                  callbacks=[mchk, lrs])
+    # print(X_train.shape)
+    # print(Y_train.shape)
+    # X_train = X_train[:200,:,:]
+    # Y_train = Y_train[:200]
+    # print(X_train.shape)
+    # print(Y_train.shape)
+    # exit()
 
-model.save(modelff)
+
+    fhist = model.fit(X_train, Y_train, batch_size=bsize, epochs=num_epochs,
+                    validation_data=[X_val, Y_val],
+                    #callbacks=[mchk, lrs])
+                    callbacks=[lrs])
+
+    # model.save(modelff)
+    # filepath = model_trained_path
+    tf.keras.models.save_model(
+        model,
+        filepath,
+        overwrite=True,
+        include_optimizer=True,
+        save_format=None,
+        signatures=None,
+        options=None
+    )
+
 Yp_val = model.predict(X_val, verbose=1, batch_size=256)
 Yp_test = model.predict(X_test, verbose=1, batch_size=256)
-np.savez(resultf, Y_val=Y_val, Yp_val=Yp_val, 
-         Y_test=Y_test, Yp_test=Yp_test, 
-         fhist=fhist.history, ecatg=ecatg, codes = codes,
-         train=train, val=val, test=test)
+# np.savez(resultf, Y_val=Y_val, Yp_val=Yp_val, 
+#          Y_test=Y_test, Yp_test=Yp_test, 
+#          fhist=fhist.history, ecatg=ecatg, codes = codes,
+#          train=train, val=val, test=test)
 
 
 ll_val = log_loss(Y_val, Yp_val)
