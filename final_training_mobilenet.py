@@ -141,6 +141,15 @@ if (not 'X_train' in locals()) or input('Reload Data? [Y/N] :').lower()=='y':
 
 K.clear_session()
 
+from tensorflow.compat.v1 import ConfigProto
+from tensorflow.compat.v1 import InteractiveSession
+
+config = ConfigProto()
+config.gpu_options.allow_growth = True
+session = InteractiveSession(config=config)
+sess = tf.compat.v1.Session()
+
+
 in_shape = X_train.shape[1:]
 
 model_get_path = os.path.join('Models', 'model_initial')
